@@ -1,54 +1,19 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Request,
-  Res,
-  Req,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Response } from 'express';
 import { AuthService } from './auth.service';
-import { CheckTokenExpiryGuard } from 'src/guards/auth.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Get('google')
-  @UseGuards(AuthGuard('google'))
-  googleLogin() {}
+  @UseGuards(AuthGuard('google')) // AuthGuard intercept the request, This will trigger the GoogleStrategy and redirect to Google's OAuth 2.0 consent screen for authentication.
+  async googleAuth(@Req() req) {}
 
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  googleLoginCallback(@Request() req, @Res() res: Response) {
-    const googleToken = req.user.accessToken;
-    const googleRefreshToken = req.user.refreshToken;
-
-    res.cookie('access_token', googleToken, { httpOnly: true });
-    res.cookie('refresh_token', googleRefreshToken, {
-      httpOnly: true,
-    });
-
-    res.redirect('http://localhost:3000/auth/profile');
-  }
-
-  @UseGuards(CheckTokenExpiryGuard)
-  @Get('profile')
-  async getProfile(@Request() req) {
-    const accessToken = req.cookies['access_token'];
-    if (accessToken)
-      return (await this.authService.getProfile(accessToken)).data;
-    throw new UnauthorizedException('No access token');
-  }
-
-  @Get('logout')
-  logout(@Req() req, @Res() res: Response) {
-    const refreshToken = req.cookies['refresh_token'];
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
-    this.authService.revokeGoogleToken(refreshToken);
-    res.redirect('http://localhost:3000/');
+  @UseGuards(AuthGuard('google')) // When redirected google will call this with code query params and the GoogleStrategy will call the validate method now because it knows now that code query param is there.
+  async googleAuthRedirect(@Req() req) {
+    console.log(req);
+    return req.user;
   }
 }
