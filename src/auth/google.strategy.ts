@@ -28,7 +28,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       picture: photos[0].value,
       accessToken,
     };
-    const oauthUser = await this.authService.validateUser(user);
-    done(null, oauthUser);
+    // const oauthUser = await this.authService.validateUser(user);
+    // done(null, oauthUser);
   }
 }

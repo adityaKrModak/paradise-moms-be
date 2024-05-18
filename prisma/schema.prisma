@@ -19,7 +19,7 @@ model User {
 model AuthAccount {
   id           Int      @id @default(autoincrement())
   oauthProvider String
-  oauthId       String
+  oauthId       String 
   userId        Int
   user          User    @relation(fields: [userId], references: [id])
 
