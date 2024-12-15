@@ -13,8 +13,9 @@ export class UsersResolver {
 
   @UseGuards(JwtAuthGuard)
   @Query(() => User, { name: 'me' })
-  async getCurrentUser(@Request() req) {
-    return this.usersService.findOne(req.user.userId);
+  async getCurrentUser(@Context() context) {
+    console.log(context.req.user);
+    return this.usersService.findOne(context.req.user.userId);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,10 +28,10 @@ export class UsersResolver {
   @UseGuards(JwtAuthGuard)
   @Mutation(() => User, { name: 'updateUserInput' })
   updateUser(
-    @Request() req,
+    @Context() context,
     @Args('updateUserInput') updateUserInput: UpdateUserInput,
   ) {
-    const userId = req.user.userId;
+    const userId = context.req.user.userId;
     if (updateUserInput.id !== userId) {
       throw new Error('You can only update your own profile');
     }

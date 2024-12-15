@@ -22,6 +22,12 @@ export class User {
   email: string;
 
   @Field()
+  firstName?: string;
+
+  @Field()
+  lastName?: string;
+
+  @Field()
   phoneNumber?: string;
 
   @Field(() => UserRole, {

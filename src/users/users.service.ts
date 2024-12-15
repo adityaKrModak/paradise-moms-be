@@ -10,7 +10,6 @@ export class UsersService {
     return this.prisma.user.create({
       data: {
         ...data,
-        role: Role.USER, // Default role for new users
       },
     });
   }
@@ -37,11 +36,13 @@ export class UsersService {
     });
   }
 
-  findAll() {
-    return `This action returns all users`;
+  async findAll() {
+    return await this.prisma.user.findMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
+  async findOne(id: number) {
+    return await this.prisma.user.findUnique({
+      where: { id },
+    });
   }
 }
