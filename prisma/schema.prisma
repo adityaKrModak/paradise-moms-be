@@ -83,13 +83,13 @@ model Order {
   id         Int         @id @default(autoincrement()) // Primary key
   userId     Int // Foreign key to User
   user       User        @relation(fields: [userId], references: [id]) // Relation to User
-  createdAt  DateTime    @default(now()) // Auto timestamp on creation
-  updatedAt  DateTime    @updatedAt // Auto timestamp on update
   status     String // Order status
   totalPrice Int // Total price of the order in paisa
   currency   String // Currency
-  paymentId  String? // Payment method
   orderItems OrderItem[] // One-to-many relation with OrderItem
+  createdAt  DateTime    @default(now()) // Auto timestamp on creation
+  updatedAt  DateTime    @updatedAt // Auto timestamp on update
+  paymentIntents paymentIntent[]
 }
 
 enum OrderStatus {
@@ -128,61 +128,73 @@ model Review {
 }
 
 model paymentGateway {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique // e.g., "razorpay", "hdfc",
-  isActive  Boolean  @default(true)
-  config    Json
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            Int            @id @default(autoincrement())
+  name          String         @unique // e.g., "razorpay", "hdfc",
+  isActive      Boolean        @default(true)
+  config        Json
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  paymentIntents paymentIntent[]
+  payments       payment[]
+  refunds        refund[]
 }
 
 model paymentIntent {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   orderId         Int
-  amount          Int // lowest unit of the currency. 
-  currency        String // Currency code (e.g., INR, USD)
-  status          String   @default("created") //PAID //REFUNDED
-  userEmail       Int // Member ID or Phone Number
-  gatewayId       Int // PaymentGateway Table
-  gatewayIntentId String   @unique
-  metadata        Json? // Store response data
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  order           Order     @relation(fields: [orderId], references: [id])
+  amount          Int       // lowest unit of the currency
+  currency        String    // Currency code (e.g., INR, USD)
+  status          String    @default("created") //PAID //REFUNDED
+  userEmail       Int       // Member ID or Phone Number
+  gatewayId       Int       // PaymentGateway Table
+  gateway         paymentGateway @relation(fields: [gatewayId], references: [id])
+  gatewayIntentId String    @unique
+  metadata        Json?     // Store response data
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  payments        payment[]
 
   @@index([userEmail])
   @@index([status])
 }
 
+
 model payment {
-  id               String   @id @default(uuid())
+  id               String    @id @default(uuid())
   intentId         String
-  gatewayId        Int // PaymentGateway Table
-  gatewayPaymentId String   @unique
+  intent           paymentIntent @relation(fields: [intentId], references: [id])
+  gatewayId        Int      // PaymentGateway Table
+  gateway          paymentGateway @relation(fields: [gatewayId], references: [id])
+  gatewayPaymentId String    @unique
   gatewaySignature String?
   userEmail        Int
-  status           String   @default("pending") // pending, success, failed, partially_refunded, refunded
+  status           String    @default("pending") // pending, success, failed, partially_refunded, refunded
   amount           Int
-  currency         String // Currency code (e.g., INR, USD)
-  amountRefunded   Int      @default(0)
-  metadata         Json? // Store response data
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  currency         String    // Currency code (e.g., INR, USD)
+  amountRefunded   Int       @default(0)
+  metadata         Json?     // Store response data
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  refunds          refund[]
 
   @@index([userEmail])
   @@index([status])
 }
 
 model refund {
-  id                String   @id @default(uuid())
-  paymentId        String
-  gatewayId        Int // Reference to payment_gateway
-  gatewayRefundId String   @unique
-  amount            Int // Amount being refunded
-  currency          String // Currency of refund
-  status            String   @default("pending") // pending, success, failed
-  metadata          Json? // Store gateway-specific response data
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String    @id @default(uuid())
+  paymentId       String
+  payment         payment   @relation(fields: [paymentId], references: [id])
+  gatewayId       Int      // Reference to payment_gateway
+  gateway         paymentGateway @relation(fields: [gatewayId], references: [id])
+  gatewayRefundId String    @unique
+  amount          Int      // Amount being refunded
+  currency        String   // Currency of refund
+  status          String    @default("pending") // pending, success, failed
+  metadata        Json?    // Store gateway-specific response data
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now())
 
   @@index([paymentId])
   @@index([status])
