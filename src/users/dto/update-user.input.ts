@@ -15,6 +15,7 @@ export class UpdateUserInput {
   @IsInt()
   @IsPositive()
   id: number;
+
   @Field(() => String, { nullable: true })
   @IsOptional()
   @IsString()
