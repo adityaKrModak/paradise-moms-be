@@ -1,84 +1,125 @@
+// schema.prisma
 datasource db {
-  provider = "postgresql" // Or your database of choice, e.g., "mysql", "sqlite", "sqlserver"
-  url      = env("DATABASE_URL")
+  provider = "postgresql" // Database provider
+  url      = env("DATABASE_URL") // Connection URL from environment variable
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client-js" // Prisma client generator
 }
+
+// model Role {
+//   id          Int          @id @default(autoincrement()) // Primary key
+//   name        String       @unique // Unique constraint on name
+//   permissions Permission[] // Many-to-many relation with Permission
+//   users       User[]       // Many-to-many relation with User
+// }
+
+// model Permission {
+//   id    Int    @id @default(autoincrement()) // Primary key
+//   name  String @unique // Unique constraint on name
+//   roles Role[] // Many-to-many relation with Role
+// }
 
 model User {                                            
-  id       Int      @id @default(autoincrement())
-  email    String   @unique
-  password String      
-  profile  Profile?
-  orders   Order[]
-  Review   Review[]
-  authAccounts AuthAccount[]
+  id           Int          @id @default(autoincrement()) // Primary key
+  email        String       @unique // Unique constraint on email
+  firstName String // First name
+  lastName  String // Last name
+  phoneNumber String? // Phone number
+  role        Role         @default(USER) // Default role for new users
+  // password     String?      // Optional password field
+  // profile      Profile?     // One-to-one relation with Profile
+  // roles        Role[]       // Many-to-many relation with Role
+  orders       Order[]      // One-to-many relation with Order
+  reviews      Review[]     // One-to-many relation with Review
+  authAccounts AuthAccount[] // One-to-many relation with AuthAccount
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([email])
 }
+
 model AuthAccount {
-  id           Int      @id @default(autoincrement())
-  oauthProvider String
-  oauthId       String 
-  userId        Int
-  user          User    @relation(fields: [userId], references: [id])
+  id           Int    @id @default(autoincrement()) // Primary key
+  oauthProvider String // OAuth provider
+  oauthId       String // OAuth ID
+  userId        Int    // Foreign key to User
+  user          User   @relation(fields: [userId], references: [id]) // Relation to User
 
-  @@unique([oauthProvider, oauthId])
-}
-model Profile {
-  id        Int    @id @default(autoincrement())
-  firstName String
-  lastName  String
-  userId    Int    @unique
-  user      User   @relation(fields: [userId], references: [id])
+  @@unique([oauthProvider, oauthId]) // Composite unique constraint
 }
 
-model Category {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String?
-  products    Product[]
-}
+// model Profile {
+//   id        Int    @id @default(autoincrement()) // Primary key
+//   firstName String // First name
+//   lastName  String // Last name
+//   userId    Int    @unique // Foreign key to User, unique constraint
+//   user      User   @relation(fields: [userId], references: [id]) // Relation to User
+// }
+
+// model Category {
+//   id          Int       @id @default(autoincrement()) // Primary key
+//   name        String    @unique // Unique constraint on name
+//   description String?   // Optional description field
+//   products    Product[] // One-to-many relation with Product
+// }
 
 model Product {
-  id          Int         @id @default(autoincrement())
-  name        String
-  description String
-  price       Float
-  stock       Int
-  categories  Category[]
-  reviews     Review[]
-  imageUrls   Json
-  OrderItem   OrderItem[]
+  id          Int         @id @default(autoincrement()) // Primary key
+  name        String      // Product name
+  description String      // Product description
+  currency    String      // Currency
+  price       Int         // Product price in paisa not in rupees for calculations
+  stock       Int         // Stock quantity
+  // categories  Category[]  // Many-to-many relation with Category
+  reviews     Review[]    // One-to-many relation with Review
+  imageUrls   Json        // JSON field for image URLs  Stores an array of image URLs as a JSON string
+  metadata    Json?        // JSON field for metadata
+  orderItems  OrderItem[] // One-to-many relation with OrderItem
 }
 
 model Order {
-  id         Int         @id @default(autoincrement())
-  userId     Int
-  user       User        @relation(fields: [userId], references: [id])
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  status     String
-  orderItems OrderItem[]
+  id         Int         @id @default(autoincrement()) // Primary key
+  userId     Int         // Foreign key to User
+  user       User        @relation(fields: [userId], references: [id]) // Relation to User
+  createdAt  DateTime    @default(now()) // Auto timestamp on creation
+  updatedAt  DateTime    @updatedAt // Auto timestamp on update
+  status     String      // Order status
+  totalPrice Int         // Total price of the order in paisa
+  currency   String      // Currency
+  orderItems OrderItem[] // One-to-many relation with OrderItem
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+enum Role {
+  USER
+  ADMIN
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
-  order     Order   @relation(fields: [orderId], references: [id])
-  productId Int
-  product   Product @relation(fields: [productId], references: [id])
-  quantity  Int
-  price     Int     
+  id        Int     @id @default(autoincrement()) // Primary key
+  orderId   Int     // Foreign key to Order
+  order     Order   @relation(fields: [orderId], references: [id]) // Relation to Order
+  productId Int     // Foreign key to Product
+  product   Product @relation(fields: [productId], references: [id]) // Relation to Product
+  quantity  Int     // Quantity of the product
+  currency  String  // Currency
+  price     Int     // Price of the product
 }
 
 model Review {
-  id        Int      @id @default(autoincrement())
-  productId Int
-  product   Product  @relation(fields: [productId], references: [id])
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now())
+  id        Int      @id @default(autoincrement()) // Primary key
+  productId Int      // Foreign key to Product
+  product   Product  @relation(fields: [productId], references: [id]) // Relation to Product
+  userId    Int      // Foreign key to User
+  user      User     @relation(fields: [userId], references: [id]) // Relation to User
+  rating    Int      // Rating
+  comment   String?  // Optional comment field
+  createdAt DateTime @default(now()) // Auto timestamp on creation
 }
