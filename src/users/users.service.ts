@@ -15,14 +15,6 @@ export class UsersService {
     });
   }
 
-  findAll() {
-    return `This action returns all users`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
-
   async findUserByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
@@ -43,5 +35,13 @@ export class UsersService {
         ...(phoneNumber && { phoneNumber }),
       },
     });
+  }
+
+  findAll() {
+    return `This action returns all users`;
+  }
+
+  findOne(id: number) {
+    return `This action returns a #${id} user`;
   }
 }

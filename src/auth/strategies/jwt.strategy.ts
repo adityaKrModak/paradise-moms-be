@@ -13,7 +13,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    // payload is the decoded JWT token
     if (!payload.userId) {
       throw new UnauthorizedException();
     }
