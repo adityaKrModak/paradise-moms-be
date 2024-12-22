@@ -146,7 +146,8 @@ model paymentIntent {
   amount          Int       // lowest unit of the currency
   currency        String    // Currency code (e.g., INR, USD)
   status          String    @default("created") //PAID //REFUNDED
-  userEmail       Int       // Member ID or Phone Number
+  userEmail       String       // Member ID or Phone Number
+  phoneNumber     String? // Member ID or Phone Number
   gatewayId       Int       // PaymentGateway Table
   gateway         paymentGateway @relation(fields: [gatewayId], references: [id])
   gatewayIntentId String    @unique
@@ -167,8 +168,7 @@ model payment {
   gatewayId        Int      // PaymentGateway Table
   gateway          paymentGateway @relation(fields: [gatewayId], references: [id])
   gatewayPaymentId String    @unique
-  gatewaySignature String?
-  userEmail        Int
+  userEmail        String
   status           String    @default("pending") // pending, success, failed, partially_refunded, refunded
   amount           Int
   currency         String    // Currency code (e.g., INR, USD)
