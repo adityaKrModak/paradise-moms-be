@@ -1,5 +1,12 @@
 import { InputType, Field, Int } from '@nestjs/graphql';
-import { IsNotEmpty, IsInt, IsString, Min, IsJSON } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsInt,
+  IsString,
+  Min,
+  IsJSON,
+  IsObject,
+} from 'class-validator';
 import { GraphQLJSON } from 'graphql-scalars';
 
 @InputType()
@@ -33,10 +40,10 @@ export class UpdateProductInput {
   stock: number;
 
   @Field(() => GraphQLJSON)
-  @IsJSON()
-  imageUrls: any;
+  @IsObject()
+  imageUrls: Record<string, any>;
 
   @Field(() => GraphQLJSON, { nullable: true })
-  @IsJSON()
+  @IsObject()
   metadata?: any;
 }
