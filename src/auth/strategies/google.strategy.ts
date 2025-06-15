@@ -11,7 +11,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     super({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: 'http://localhost:3000/auth/google/callback', // the url that google will redirect to after the user logs in after they have authenticated
+      callbackURL: `${process.env.API_URL}/auth/google/callback`, // the url that google will redirect to after the user logs in after they have authenticated
       scope: ['email', 'profile'], //This specifies the access you are requesting from the user.  In this case, email and profile allow you to get the user’s email address and basic profile information.
       // access_type: 'offline', //This specifies that you want to get a refresh token from Google. This is useful when you want to access the user’s data when they are not logged in.
       prompt: 'consent', //This specifies that you want the user to consent to the access you are requesting.

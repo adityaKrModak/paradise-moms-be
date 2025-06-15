@@ -3,6 +3,7 @@ import { ObjectType, Field, Int, registerEnumType } from '@nestjs/graphql';
 import { Order } from '../../orders/entities/order.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { AuthAccount } from '../../auth-accounts/entities/auth-account.entity';
+import { Address } from './address.entity';
 
 export enum UserRole {
   ADMIN = 'ADMIN',
@@ -24,10 +25,10 @@ export class User {
   @Field()
   firstName?: string;
 
-  @Field()
+  @Field({ nullable: true })
   lastName?: string;
 
-  @Field()
+  @Field({ nullable: true })
   phoneNumber?: string;
 
   @Field(() => UserRole, {
@@ -41,6 +42,9 @@ export class User {
 
   @Field(() => [Review], { nullable: true })
   reviews?: Review[];
+
+  @Field(() => [Address], { nullable: true })
+  addresses?: Address[];
 
   @Field(() => [AuthAccount], { nullable: true })
   authAccounts?: AuthAccount[];

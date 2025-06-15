@@ -14,8 +14,16 @@ async function bootstrap() {
     allowedHeaders: 'Content-Type, Accept, Authorization',
   });
 
-  app.useGlobalPipes(new ValidationPipe());
-  await app.listen(3000);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    }),
+  );
+  await app.listen(3001);
 }
 dotenv.config(); // used for reading the .env file
 bootstrap();

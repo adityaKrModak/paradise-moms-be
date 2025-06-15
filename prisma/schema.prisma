@@ -24,9 +24,9 @@ generator client {
 model User {
   id           Int           @id @default(autoincrement()) // Primary key
   email        String        @unique // Unique constraint on email
-  firstName    String // First name
-  lastName     String // Last name
-  phoneNumber  String? // Phone number
+  firstName    String        @map("first_name") // First name
+  lastName     String        @map("last_name") // Last name
+  phoneNumber  String?       @map("phone_number") // Phone number
   role         Role          @default(USER) // Default role for new users
   // password     String?      // Optional password field
   // profile      Profile?     // One-to-one relation with Profile
@@ -34,20 +34,40 @@ model User {
   orders       Order[] // One-to-many relation with Order
   reviews      Review[] // One-to-many relation with Review
   authAccounts AuthAccount[] // One-to-many relation with AuthAccount
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  addresses    Address[] // One-to-many relation with Address
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
 
   @@index([email])
+  @@map("users")
 }
 
 model AuthAccount {
   id            Int    @id @default(autoincrement()) // Primary key
-  oauthProvider String // OAuth provider
-  oauthId       String // OAuth ID
-  userId        Int // Foreign key to User
+  oauthProvider String @map("oauth_provider") // OAuth provider
+  oauthId       String @map("oauth_id") // OAuth ID
+  userId        Int    @map("user_id") // Foreign key to User
   user          User   @relation(fields: [userId], references: [id]) // Relation to User
 
   @@unique([oauthProvider, oauthId]) // Composite unique constraint
+  @@map("auth_accounts")
+}
+
+model Address {
+  id          Int         @id @default(autoincrement())
+  street      String
+  city        String
+  state       String
+  zip         String
+  country     String
+  addressType AddressType @default(SHIPPING)
+  userId      Int         @map("user_id")
+  user        User        @relation(fields: [userId], references: [id])
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  @@unique([street, city, state, zip, country, userId])
+  @@map("addresses")
 }
 
 // model Profile {
@@ -58,12 +78,12 @@ model AuthAccount {
 //   user      User   @relation(fields: [userId], references: [id]) // Relation to User
 // }
 
-// model Category {
-//   id          Int       @id @default(autoincrement()) // Primary key
-//   name        String    @unique // Unique constraint on name
-//   description String?   // Optional description field
-//   products    Product[] // One-to-many relation with Product
-// }
+model Category {
+  id          Int       @id @default(autoincrement()) // Primary key
+  name        String    @unique // Unique constraint on name
+  description String?   // Optional description field
+  products    Product[] // One-to-many relation with Product
+}
 
 model Product {
   id          Int         @id @default(autoincrement()) // Primary key
@@ -72,24 +92,29 @@ model Product {
   currency    String // Currency
   price       Int // Product price in paisa not in rupees for calculations
   stock       Int // Stock quantity
-  // categories  Category[]  // Many-to-many relation with Category
+  categories  Category[]  // Many-to-many relation with Category
   reviews     Review[] // One-to-many relation with Review
-  imageUrls   Json // JSON field for image URLs  Stores an array of image URLs as a JSON string
+  imageUrls   Json        @map("image_urls") // JSON field for image URLs  Stores an array of image URLs as a JSON string
   metadata    Json? // JSON field for metadata
   orderItems  OrderItem[] // One-to-many relation with OrderItem
+
+  @@map("products")
 }
 
 model Order {
-  id         Int         @id @default(autoincrement()) // Primary key
-  userId     Int // Foreign key to User
-  user       User        @relation(fields: [userId], references: [id]) // Relation to User
-  status     String // Order status
-  totalPrice Int // Total price of the order in paisa
-  currency   String // Currency
-  orderItems OrderItem[] // One-to-many relation with OrderItem
-  createdAt  DateTime    @default(now()) // Auto timestamp on creation
-  updatedAt  DateTime    @updatedAt // Auto timestamp on update
+  id             Int             @id @default(autoincrement()) // Primary key
+  userId         Int             @map("user_id") // Foreign key to User
+  user           User            @relation(fields: [userId], references: [id]) // Relation to User
+  status         OrderStatus // Order status
+  totalPrice     Int             @map("total_price") // Total price of the order in paisa
+  currency       String // Currency
+  address        Json // Address of the order
+  orderItems     OrderItem[] // One-to-many relation with OrderItem
+  createdAt      DateTime        @default(now()) @map("created_at") // Auto timestamp on creation
+  updatedAt      DateTime        @updatedAt @map("updated_at") // Auto timestamp on update
   paymentIntents paymentIntent[]
+
+  @@map("orders")
 }
 
 enum OrderStatus {
@@ -100,6 +125,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum AddressType {
+  SHIPPING
+  BILLING
+  PRIMARY
+}
+
 enum Role {
   USER
   ADMIN
@@ -107,95 +138,103 @@ enum Role {
 
 model OrderItem {
   id        Int     @id @default(autoincrement()) // Primary key
-  orderId   Int // Foreign key to Order
+  orderId   Int     @map("order_id") // Foreign key to Order
   order     Order   @relation(fields: [orderId], references: [id]) // Relation to Order
-  productId Int // Foreign key to Product
+  productId Int     @map("product_id") // Foreign key to Product
   product   Product @relation(fields: [productId], references: [id]) // Relation to Product
   quantity  Int // Quantity of the product
   currency  String // Currency
   price     Int // Price of the product
+
+  @@map("order_items")
 }
 
 model Review {
   id        Int      @id @default(autoincrement()) // Primary key
-  productId Int // Foreign key to Product
+  productId Int      @map("product_id") // Foreign key to Product
   product   Product  @relation(fields: [productId], references: [id]) // Relation to Product
-  userId    Int // Foreign key to User
+  userId    Int      @map("user_id") // Foreign key to User
   user      User     @relation(fields: [userId], references: [id]) // Relation to User
   rating    Int // Rating
   comment   String? // Optional comment field
-  createdAt DateTime @default(now()) // Auto timestamp on creation
+  createdAt DateTime @default(now()) @map("created_at") // Auto timestamp on creation
+
+  @@map("reviews")
 }
 
 model paymentGateway {
-  id            Int            @id @default(autoincrement())
-  name          String         @unique // e.g., "razorpay", "hdfc",
-  isActive      Boolean        @default(true)
-  config        Json
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             Int             @id @default(autoincrement())
+  name           String          @unique // e.g., "razorpay", "hdfc",
+  isActive       Boolean         @default(true) @map("is_active")
+  config         Json
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
   paymentIntents paymentIntent[]
   payments       payment[]
   refunds        refund[]
+
+  @@map("payment_gateways")
 }
 
 model paymentIntent {
-  id              String    @id @default(uuid())
-  orderId         Int
-  order           Order     @relation(fields: [orderId], references: [id])
-  amount          Int       // lowest unit of the currency
-  currency        String    // Currency code (e.g., INR, USD)
-  status          String    @default("created") //PAID //REFUNDED
-  userEmail       String       // Member ID or Phone Number
-  phoneNumber     String? // Member ID or Phone Number
-  gatewayId       Int       // PaymentGateway Table
+  id              String         @id @default(uuid())
+  orderId         Int            @map("order_id")
+  order           Order          @relation(fields: [orderId], references: [id])
+  amount          Int // lowest unit of the currency
+  currency        String // Currency code (e.g., INR, USD)
+  status          String         @default("created") //PAID //REFUNDED
+  userEmail       String         @map("user_email") // Member ID or Phone Number
+  phoneNumber     String?        @map("phone_number") // Member ID or Phone Number
+  gatewayId       Int            @map("gateway_id") // PaymentGateway Table
   gateway         paymentGateway @relation(fields: [gatewayId], references: [id])
-  gatewayIntentId String    @unique
-  metadata        Json?     // Store response data
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  gatewayIntentId String         @unique @map("gateway_intent_id")
+  metadata        Json? // Store response data
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
   payments        payment[]
 
   @@index([userEmail])
   @@index([status])
+  @@map("payment_intents")
 }
 
-
 model payment {
-  id               String    @id @default(uuid())
-  intentId         String
-  intent           paymentIntent @relation(fields: [intentId], references: [id])
-  gatewayId        Int      // PaymentGateway Table
+  id               String         @id @default(uuid())
+  intentId         String         @map("intent_id")
+  intent           paymentIntent  @relation(fields: [intentId], references: [id])
+  gatewayId        Int            @map("gateway_id") // PaymentGateway Table
   gateway          paymentGateway @relation(fields: [gatewayId], references: [id])
-  gatewayPaymentId String    @unique
-  userEmail        String
-  status           String    @default("pending") // pending, success, failed, partially_refunded, refunded
+  gatewayPaymentId String         @unique @map("gateway_payment_id")
+  userEmail        String         @map("user_email")
+  status           String         @default("pending") // pending, success, failed, partially_refunded, refunded
   amount           Int
-  currency         String    // Currency code (e.g., INR, USD)
-  amountRefunded   Int       @default(0)
-  metadata         Json?     // Store response data
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  currency         String // Currency code (e.g., INR, USD)
+  amountRefunded   Int            @default(0) @map("amount_refunded")
+  metadata         Json? // Store response data
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
   refunds          refund[]
 
   @@index([userEmail])
   @@index([status])
+  @@map("payments")
 }
 
 model refund {
-  id              String    @id @default(uuid())
-  paymentId       String
-  payment         payment   @relation(fields: [paymentId], references: [id])
-  gatewayId       Int      // Reference to payment_gateway
+  id              String         @id @default(uuid())
+  paymentId       String         @map("payment_id")
+  payment         payment        @relation(fields: [paymentId], references: [id])
+  gatewayId       Int            @map("gateway_id") // Reference to payment_gateway
   gateway         paymentGateway @relation(fields: [gatewayId], references: [id])
-  gatewayRefundId String    @unique
-  amount          Int      // Amount being refunded
-  currency        String   // Currency of refund
-  status          String    @default("pending") // pending, success, failed
-  metadata        Json?    // Store gateway-specific response data
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now())
+  gatewayRefundId String         @unique @map("gateway_refund_id")
+  amount          Int // Amount being refunded
+  currency        String // Currency of refund
+  status          String         @default("pending") // pending, success, failed
+  metadata        Json? // Store gateway-specific response data
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @default(now()) @map("updated_at")
 
   @@index([paymentId])
   @@index([status])
+  @@map("refunds")
 }

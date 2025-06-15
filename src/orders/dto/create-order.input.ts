@@ -24,4 +24,9 @@ export class CreateOrderInput {
   @IsString()
   @IsNotEmpty()
   currency: string;
+
+  @Field(() => Int)
+  @IsInt()
+  @IsNotEmpty()
+  addressId: number;
 }

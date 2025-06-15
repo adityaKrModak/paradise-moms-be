@@ -10,11 +10,8 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { AuthAccountsModule } from './auth-accounts/auth-accounts.module';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLJSON } from 'graphql-scalars';
-import { PaymentGatewaysModule } from './payment-gateways/payment-gateways.module';
-import { PaymentIntentsModule } from './payment-intents/payment-intents.module';
-import { PaymentsModule } from './payments/payments.module';
-import { RefundsModule } from './refunds/refunds.module';
-import { RazorpayModule } from './razorpay/razorpay.module';
+import { PaymentModule } from './payment/payment.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -30,11 +27,8 @@ import { RazorpayModule } from './razorpay/razorpay.module';
     ProductsModule,
     ReviewsModule,
     AuthAccountsModule,
-    PaymentGatewaysModule,
-    PaymentIntentsModule,
-    PaymentsModule,
-    RefundsModule,
-    RazorpayModule,
+    PaymentModule,
+    CategoriesModule,
   ],
 })
 export class AppModule {}

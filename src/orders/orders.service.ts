@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrderInput } from './dto/create-order.input';
 import { UpdateOrderInput } from './dto/update-order.input';
@@ -9,11 +13,26 @@ export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
   async create(createOrderInput: CreateOrderInput, userId: number) {
+    const { orderItems, currency, addressId } = createOrderInput;
     let totalPrice = 0;
+
+    // Fetch and validate the address
+    const address = await this.prisma.address.findUnique({
+      where: { id: addressId },
+    });
+    if (!address) {
+      throw new NotFoundException(`Address #${addressId} not found`);
+    }
+    if (address.userId !== userId) {
+      throw new UnauthorizedException(
+        `You do not have permission to use this address.`,
+      );
+    }
+    const { id: _addressId, userId: _userId, ...addressSnapshot } = address;
 
     // Get all products and calculate total price
     const products = await Promise.all(
-      createOrderInput.orderItems.map(async (item) => {
+      orderItems.map(async (item) => {
         const product = await this.prisma.product.findUnique({
           where: { id: item.productId },
         });
@@ -31,16 +50,21 @@ export class OrdersService {
     // Create order with items
     return this.prisma.order.create({
       data: {
-        userId,
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
         status: OrderStatus.PENDING,
         totalPrice,
-        currency: createOrderInput.currency,
+        currency,
+        address: addressSnapshot,
         orderItems: {
-          create: createOrderInput.orderItems.map((item, index) => ({
+          create: orderItems.map((item, index) => ({
             productId: item.productId,
             quantity: item.quantity,
             price: products[index].price,
-            currency: createOrderInput.currency,
+            currency: currency,
           })),
         },
       },
