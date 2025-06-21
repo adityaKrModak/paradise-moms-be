@@ -4,6 +4,7 @@ import { Order } from '../../orders/entities/order.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { AuthAccount } from '../../auth-accounts/entities/auth-account.entity';
 import { Address } from './address.entity';
+import { Prisma } from '@prisma/client';
 
 export enum UserRole {
   ADMIN = 'ADMIN',

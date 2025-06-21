@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { RazorpayService } from '@/payment/razorpay/razorpay.service';
-import { PaymentGatewaysModule } from '@/payment/payment-gateways/payment-gateways.module';
+import { RazorpayService } from './razorpay.service';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
-  imports: [PaymentGatewaysModule],
+  imports: [ConfigModule],
   providers: [RazorpayService],
   exports: [RazorpayService],
 })

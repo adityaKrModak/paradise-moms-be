@@ -7,5 +7,6 @@ import { RazorpayModule } from '@/payment/razorpay/razorpay.module';
 @Module({
   providers: [PaymentsResolver, PaymentsService],
   imports: [PaymentGatewaysModule, RazorpayModule],
+  exports: [PaymentsService],
 })
 export class PaymentsModule {}

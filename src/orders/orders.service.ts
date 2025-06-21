@@ -7,74 +7,71 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateOrderInput } from './dto/create-order.input';
 import { UpdateOrderInput } from './dto/update-order.input';
 import { OrderStatus } from './entities/order.entity';
+import { OrderStatus as PrismaOrderStatus } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
   async create(createOrderInput: CreateOrderInput, userId: number) {
-    const { orderItems, currency, addressId } = createOrderInput;
-    let totalPrice = 0;
+    const { orderItems, addressId } = createOrderInput;
 
-    // Fetch and validate the address
-    const address = await this.prisma.address.findUnique({
-      where: { id: addressId },
+    const productIds = orderItems.map((item) => item.productId);
+    const products = await this.prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+      },
     });
-    if (!address) {
-      throw new NotFoundException(`Address #${addressId} not found`);
+
+    if (products.length !== productIds.length) {
+      throw new NotFoundException('One or more products not found.');
     }
-    if (address.userId !== userId) {
-      throw new UnauthorizedException(
-        `You do not have permission to use this address.`,
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+
+    let totalPrice = 0;
+    for (const item of orderItems) {
+      const product = productMap.get(item.productId);
+      totalPrice += product.price * item.quantity;
+    }
+
+    const address = await this.prisma.address.findUnique({
+      where: { id: addressId, userId: userId },
+    });
+
+    if (!address) {
+      throw new NotFoundException(
+        `Address with ID ${addressId} not found for this user.`,
       );
     }
-    const { id: _addressId, userId: _userId, ...addressSnapshot } = address;
 
-    // Get all products and calculate total price
-    const products = await Promise.all(
-      orderItems.map(async (item) => {
-        const product = await this.prisma.product.findUnique({
-          where: { id: item.productId },
-        });
-        if (!product) {
-          throw new NotFoundException(`Product #${item.productId} not found`);
-        }
-        if (product.stock < item.quantity) {
-          throw new Error(`Insufficient stock for product #${item.productId}`);
-        }
-        totalPrice += product.price * item.quantity;
-        return product;
-      }),
-    );
-
-    // Create order with items
     return this.prisma.order.create({
       data: {
-        user: {
-          connect: {
-            id: userId,
-          },
-        },
-        status: OrderStatus.PENDING,
+        userId,
+        status: PrismaOrderStatus.PENDING,
         totalPrice,
-        currency,
-        address: addressSnapshot,
+        currency: createOrderInput.currency,
+        address: {
+          fullName: address.fullName,
+          street: address.street,
+          city: address.city,
+          state: address.state,
+          zip: address.zip,
+          country: address.country,
+          phoneNumber: address.phoneNumber,
+        },
         orderItems: {
-          create: orderItems.map((item, index) => ({
+          create: orderItems.map((item) => ({
             productId: item.productId,
             quantity: item.quantity,
-            price: products[index].price,
-            currency: currency,
+            price: productMap.get(item.productId).price,
+            currency: createOrderInput.currency,
           })),
         },
       },
       include: {
+        orderItems: true,
         user: true,
-        orderItems: {
-          include: {
-            product: true,
-          },
-        },
       },
     });
   }

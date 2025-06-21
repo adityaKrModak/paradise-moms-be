@@ -7,6 +7,9 @@ import {
 import { RazorpayService } from '@/payment/razorpay/razorpay.service';
 import { PaymentGatewaysService } from '@/payment/payment-gateways/payment-gateways.service';
 import { PrismaService } from 'prisma/prisma.service';
+import crypto from 'crypto';
+import { ConfigService } from '@nestjs/config';
+import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentsService {
@@ -14,6 +17,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private razorpayService: RazorpayService,
     private paymentGatewaysService: PaymentGatewaysService,
+    private configService: ConfigService,
   ) {}
 
   async findAll() {
@@ -57,6 +61,136 @@ export class PaymentsService {
     }
 
     return payment;
+  }
+
+  async verifyRazorpayPayment(
+    razorpayOrderId: string,
+    razorpayPaymentId: string,
+    razorpaySignature: string,
+  ) {
+    const body = razorpayOrderId + '|' + razorpayPaymentId;
+    const expectedSignature = crypto
+      .createHmac('sha256', this.configService.get('RAZORPAY_WEBHOOK_SECRET'))
+      .update(body.toString())
+      .digest('hex');
+
+    if (expectedSignature !== razorpaySignature) {
+      throw new BadRequestException('Invalid Razorpay signature.');
+    }
+
+    // --- Signature is valid, now create the payment record ---
+
+    const paymentIntent = await this.prisma.paymentIntent.findUnique({
+      where: { gatewayIntentId: razorpayOrderId },
+      include: { order: true },
+    });
+
+    if (!paymentIntent) {
+      throw new BadRequestException('Payment Intent not found.');
+    }
+
+    const razorpayPayment =
+      await this.razorpayService.razorpay.payments.fetch(razorpayPaymentId);
+
+    if (razorpayPayment.status !== 'captured') {
+      throw new BadRequestException('Payment not captured on Razorpay.');
+    }
+
+    // Create the payment record
+    const payment = await this.prisma.payment.create({
+      data: {
+        intentId: paymentIntent.id,
+        gatewayId: paymentIntent.gatewayId,
+        gatewayPaymentId: razorpayPaymentId,
+        userEmail: paymentIntent.userEmail,
+        status: 'success',
+        amount: Number(razorpayPayment.amount),
+        currency: razorpayPayment.currency,
+        metadata: JSON.parse(JSON.stringify(razorpayPayment)),
+      },
+    });
+
+    // Update the payment intent status
+    await this.prisma.paymentIntent.update({
+      where: { id: paymentIntent.id },
+      data: { status: 'PAID' },
+    });
+
+    // Update the order status
+    await this.prisma.order.update({
+      where: { id: paymentIntent.orderId },
+      data: { status: OrderStatus.PROCESSING },
+    });
+
+    return payment;
+  }
+
+  async handleRazorpayWebhook(signature: string, body: any) {
+    const webhookSecret = this.configService.get('RAZORPAY_WEBHOOK_SECRET');
+
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(JSON.stringify(body))
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      throw new BadRequestException('Invalid Razorpay webhook signature.');
+    }
+
+    // --- Signature is valid, now process the event ---
+    const event = body;
+
+    if (event.event === 'payment.captured') {
+      const razorpayPayment = event.payload.payment.entity;
+
+      // --- Idempotency Check ---
+      const existingPayment = await this.prisma.payment.findUnique({
+        where: { gatewayPaymentId: razorpayPayment.id },
+      });
+
+      if (existingPayment) {
+        console.log(`Payment ${razorpayPayment.id} already processed.`);
+        return { received: true };
+      }
+
+      const paymentIntent = await this.prisma.paymentIntent.findUnique({
+        where: { gatewayIntentId: razorpayPayment.order_id },
+      });
+
+      if (!paymentIntent) {
+        throw new BadRequestException('Payment Intent not found for webhook.');
+      }
+
+      // Create the payment record
+      const payment = await this.prisma.payment.create({
+        data: {
+          intentId: paymentIntent.id,
+          gatewayId: paymentIntent.gatewayId,
+          gatewayPaymentId: razorpayPayment.id,
+          userEmail: paymentIntent.userEmail,
+          status: 'success',
+          amount: Number(razorpayPayment.amount),
+          currency: razorpayPayment.currency,
+          metadata: JSON.parse(JSON.stringify(razorpayPayment)),
+        },
+      });
+
+      // Update the payment intent status
+      await this.prisma.paymentIntent.update({
+        where: { id: paymentIntent.id },
+        data: { status: 'PAID' },
+      });
+
+      // Update the order status
+      await this.prisma.order.update({
+        where: { id: paymentIntent.orderId },
+        data: { status: OrderStatus.PROCESSING },
+      });
+
+      console.log(`Successfully processed payment ${payment.id} via webhook.`);
+    }
+
+    return { received: true };
   }
 
   //   async verifyAndProcessPayment(params: {

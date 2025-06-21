@@ -7,6 +7,9 @@ import { PrismaService } from 'prisma/prisma.service';
 import { CreatePaymentIntentInput } from './dto/create-payment-intent.input';
 import { PaymentGatewaysService } from '@/payment/payment-gateways/payment-gateways.service';
 import { RazorpayService } from '@/payment/razorpay/razorpay.service';
+import { PaymentIntent } from './entities/payment-intent.entity';
+import { User } from 'src/users/entities/user.entity';
+import { OrderStatus } from '@prisma/client';
 
 @Injectable()
 export class PaymentIntentsService {
@@ -63,7 +66,7 @@ export class PaymentIntentsService {
     // Create gateway-specific payment intent
     let gatewayIntentId: string;
     if (gateway.name.toLowerCase() === 'razorpay') {
-      const razorpayOrder = await this.razorpayService.createOrder({
+      const razorpayOrder = await this.razorpayService.razorpay.orders.create({
         amount,
         currency,
         notes: metadata,
@@ -127,5 +130,60 @@ export class PaymentIntentsService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async createRazorpayOrder(orderId: number, user: User) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId, userId: user.id },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order with ID ${orderId} not found.`);
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      throw new Error('Order is not in a pending state.');
+    }
+
+    const razorpayGateway = await this.prisma.paymentGateway.findUnique({
+      where: { name: 'razorpay' },
+    });
+
+    if (!razorpayGateway) {
+      throw new NotFoundException('Razorpay payment gateway not found.');
+    }
+
+    const razorpayOrderOptions = {
+      amount: order.totalPrice,
+      currency: order.currency,
+      receipt: order.id.toString(),
+    };
+
+    const razorpayOrder =
+      await this.razorpayService.razorpay.orders.create(razorpayOrderOptions);
+
+    const paymentIntent = await this.prisma.paymentIntent.create({
+      data: {
+        orderId: order.id,
+        amount: order.totalPrice,
+        currency: order.currency,
+        status: 'created',
+        userEmail: user.email,
+        phoneNumber: user.phoneNumber,
+        gatewayId: razorpayGateway.id,
+        gatewayIntentId: razorpayOrder.id,
+        metadata: JSON.parse(JSON.stringify(razorpayOrder)),
+      },
+      include: {
+        gateway: true,
+        order: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+
+    return paymentIntent;
   }
 }

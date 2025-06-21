@@ -14,12 +14,15 @@ export class CategoriesService {
   }
 
   findAll() {
-    return this.prisma.category.findMany({ include: { products: true } });
+    return this.prisma.category.findMany({
+      where: { deletedAt: null },
+      include: { products: true },
+    });
   }
 
   findOne(id: number) {
     return this.prisma.category.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: { products: true },
     });
   }
@@ -33,6 +36,9 @@ export class CategoriesService {
   }
 
   remove(id: number) {
-    return this.prisma.category.delete({ where: { id } });
+    return this.prisma.category.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 }

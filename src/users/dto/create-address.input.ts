@@ -4,6 +4,11 @@ import { AddressType } from '@prisma/client';
 
 @InputType()
 export class CreateAddressInput {
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  fullName?: string;
+
   @Field()
   @IsNotEmpty()
   @IsString()
@@ -29,8 +34,13 @@ export class CreateAddressInput {
   @IsString()
   country: string;
 
-  @Field(() => AddressType, { nullable: true })
+  @Field({ nullable: true })
+  @IsString()
   @IsOptional()
+  phoneNumber?: string;
+
+  @Field(() => AddressType, { defaultValue: AddressType.SECONDARY })
   @IsEnum(AddressType)
+  @IsOptional()
   addressType?: AddressType;
 }

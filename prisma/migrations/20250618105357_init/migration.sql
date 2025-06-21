@@ -2,7 +2,7 @@
 CREATE TYPE "OrderStatus" AS ENUM ('PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "AddressType" AS ENUM ('SHIPPING', 'BILLING', 'PRIMARY');
+CREATE TYPE "AddressType" AS ENUM ('PRIMARY', 'SECONDARY');
 
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('USER', 'ADMIN');
@@ -34,12 +34,14 @@ CREATE TABLE "auth_accounts" (
 -- CreateTable
 CREATE TABLE "addresses" (
     "id" SERIAL NOT NULL,
+    "full_name" TEXT NOT NULL,
+    "phone_number" TEXT,
     "street" TEXT NOT NULL,
     "city" TEXT NOT NULL,
     "state" TEXT NOT NULL,
     "zip" TEXT NOT NULL,
     "country" TEXT NOT NULL,
-    "addressType" "AddressType" NOT NULL DEFAULT 'SHIPPING',
+    "addressType" "AddressType" NOT NULL DEFAULT 'SECONDARY',
     "user_id" INTEGER NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
@@ -48,12 +50,13 @@ CREATE TABLE "addresses" (
 );
 
 -- CreateTable
-CREATE TABLE "Category" (
+CREATE TABLE "categories" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
+    "deleted_at" TIMESTAMP(3),
 
-    CONSTRAINT "Category_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "categories_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -66,6 +69,7 @@ CREATE TABLE "products" (
     "stock" INTEGER NOT NULL,
     "image_urls" JSONB NOT NULL,
     "metadata" JSONB,
+    "deleted_at" TIMESTAMP(3),
 
     CONSTRAINT "products_pkey" PRIMARY KEY ("id")
 );
@@ -191,7 +195,7 @@ CREATE UNIQUE INDEX "auth_accounts_oauth_provider_oauth_id_key" ON "auth_account
 CREATE UNIQUE INDEX "addresses_street_city_state_zip_country_user_id_key" ON "addresses"("street", "city", "state", "zip", "country", "user_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Category_name_key" ON "Category"("name");
+CREATE UNIQUE INDEX "categories_name_key" ON "categories"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payment_gateways_name_key" ON "payment_gateways"("name");
@@ -269,7 +273,7 @@ ALTER TABLE "refunds" ADD CONSTRAINT "refunds_payment_id_fkey" FOREIGN KEY ("pay
 ALTER TABLE "refunds" ADD CONSTRAINT "refunds_gateway_id_fkey" FOREIGN KEY ("gateway_id") REFERENCES "payment_gateways"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "_CategoryToProduct" ADD CONSTRAINT "_CategoryToProduct_A_fkey" FOREIGN KEY ("A") REFERENCES "Category"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "_CategoryToProduct" ADD CONSTRAINT "_CategoryToProduct_A_fkey" FOREIGN KEY ("A") REFERENCES "categories"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_CategoryToProduct" ADD CONSTRAINT "_CategoryToProduct_B_fkey" FOREIGN KEY ("B") REFERENCES "products"("id") ON DELETE CASCADE ON UPDATE CASCADE;

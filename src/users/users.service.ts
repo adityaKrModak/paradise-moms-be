@@ -1,19 +1,33 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { UpdateUserInput } from './dto/update-user.input';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Role, Prisma, AddressType } from '@prisma/client';
 import { CreateAddressInput } from './dto/create-address.input';
 import { UpdateAddressInput } from './dto/update-address.input';
+import { CreateUserInput } from './dto/create-user.input';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
-  async create(data: Prisma.UserCreateInput) {
-    return this.prisma.user.create({
-      data: {
-        ...data,
-      },
-    });
+  async create(createUserInput: Prisma.UserCreateInput) {
+    try {
+      return await this.prisma.user.create({
+        data: createUserInput,
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('User with this email already exists.');
+      }
+      throw error;
+    }
   }
 
   async findUserByEmail(email: string) {
@@ -26,15 +40,15 @@ export class UsersService {
   }
 
   async update(id: number, updateUserInput: UpdateUserInput) {
-    const { firstName, lastName, phoneNumber } = updateUserInput;
+    const { role, ...data } = updateUserInput;
+
+    if (role) {
+      throw new Error('Role cannot be updated.');
+    }
 
     return this.prisma.user.update({
       where: { id },
-      data: {
-        ...(firstName && { firstName }),
-        ...(lastName && { lastName }),
-        ...(phoneNumber && { phoneNumber }),
-      },
+      data,
     });
   }
 
@@ -53,43 +67,86 @@ export class UsersService {
   }
 
   async addAddress(userId: number, createAddressInput: CreateAddressInput) {
-    const { street, city, state, zip, country } = createAddressInput;
-    const existingAddress = await this.prisma.address.findUnique({
-      where: {
-        street_city_state_zip_country_userId: {
-          street,
-          city,
-          state,
-          zip,
-          country,
+    const { addressType } = createAddressInput;
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const fullName =
+      createAddressInput.fullName || `${user.firstName} ${user.lastName}`;
+    const phoneNumber = createAddressInput.phoneNumber || user.phoneNumber;
+
+    try {
+      if (addressType === AddressType.PRIMARY) {
+        return this.prisma.$transaction(async (tx) => {
+          await tx.address.updateMany({
+            where: { userId, addressType: AddressType.PRIMARY },
+            data: { addressType: AddressType.SECONDARY },
+          });
+          return tx.address.create({
+            data: {
+              ...createAddressInput,
+              userId,
+              fullName,
+              ...(phoneNumber && { phoneNumber }),
+              addressType: AddressType.PRIMARY,
+            },
+          });
+        });
+      }
+
+      return await this.prisma.address.create({
+        data: {
+          ...createAddressInput,
           userId,
+          fullName,
+          phoneNumber,
         },
-      },
-    });
-
-    if (existingAddress) {
-      throw new ConflictException('This address already exists.');
+      });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new ConflictException(
+          'This address already exists for the user.',
+        );
+      }
+      throw error;
     }
-
-    return this.prisma.address.create({
-      data: {
-        ...createAddressInput,
-        userId,
-      },
-    });
   }
 
   async updateAddress(userId: number, updateAddressInput: UpdateAddressInput) {
     const { id, ...data } = updateAddressInput;
-    // Make sure the address belongs to the user
     const address = await this.prisma.address.findFirst({
       where: { id, userId },
     });
     if (!address) {
-      throw new Error(
-        'Address not found or you do not have permission to update it.',
-      );
+      throw new NotFoundException(`Address #${id} not found`);
     }
+
+    if (
+      data.addressType === AddressType.PRIMARY &&
+      address.addressType !== AddressType.PRIMARY
+    ) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.address.updateMany({
+          where: { userId, addressType: AddressType.PRIMARY },
+          data: { addressType: AddressType.SECONDARY },
+        });
+        await tx.address.update({
+          where: { id },
+          data,
+        });
+      });
+      return this.prisma.address.findUnique({ where: { id } });
+    }
+
+    if (data.fullName === null) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      data.fullName = `${user.firstName} ${user.lastName}`;
+    }
+
+    if (data.phoneNumber === null) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      data.phoneNumber = user.phoneNumber;
+    }
+
     return this.prisma.address.update({
       where: { id },
       data,

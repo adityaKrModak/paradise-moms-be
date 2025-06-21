@@ -12,6 +12,9 @@ export class Address {
   id: number;
 
   @Field()
+  fullName: string;
+
+  @Field()
   street: string;
 
   @Field()
@@ -25,6 +28,9 @@ export class Address {
 
   @Field()
   country: string;
+
+  @Field({ nullable: true })
+  phoneNumber?: string;
 
   @Field(() => AddressType)
   addressType: AddressType;

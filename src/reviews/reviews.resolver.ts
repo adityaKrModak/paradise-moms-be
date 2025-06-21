@@ -14,13 +14,24 @@ export class ReviewsResolver {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Mutation(() => Review)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   createReview(
     @Args('createReviewInput') createReviewInput: CreateReviewInput,
     @Context() context,
   ) {
-    const userId = context.req.user.userId;
-    return this.reviewsService.create(createReviewInput, userId);
+    const loggedInUser = context.req.user;
+    let userIdToAssign = loggedInUser.userId;
+
+    if (createReviewInput.userId) {
+      if (loggedInUser.role !== UserRole.ADMIN) {
+        throw new Error(
+          'You are not authorized to create a review for another user.',
+        );
+      }
+      userIdToAssign = createReviewInput.userId;
+    }
+
+    return this.reviewsService.create(createReviewInput, userIdToAssign);
   }
 
   @Query(() => [Review], { name: 'reviews' })

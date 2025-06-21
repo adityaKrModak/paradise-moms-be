@@ -3,6 +3,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { PaymentIntentsModule } from './payment-intents/payment-intents.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { RazorpayModule } from './razorpay/razorpay.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -10,6 +11,7 @@ import { RazorpayModule } from './razorpay/razorpay.module';
     PaymentIntentsModule,
     RefundsModule,
     RazorpayModule,
+    WebhooksModule,
   ],
   exports: [
     PaymentsModule,

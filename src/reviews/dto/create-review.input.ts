@@ -25,4 +25,9 @@ export class CreateReviewInput {
   @IsString()
   @IsOptional()
   comment?: string;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsInt()
+  userId?: number;
 }

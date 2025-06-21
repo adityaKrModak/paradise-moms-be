@@ -1,8 +1,9 @@
-import { Resolver, Query, Mutation, Args, Int, Context } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, Context } from '@nestjs/graphql';
 import { UsersService } from './users.service';
 import { User, UserRole } from './entities/user.entity';
+import { CreateUserInput } from './dto/create-user.input';
 import { UpdateUserInput } from './dto/update-user.input';
-import { Request, UseGuards } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
@@ -13,6 +14,16 @@ import { UpdateAddressInput } from './dto/update-address.input';
 @Resolver(() => User)
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
+
+  @Mutation(() => User)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  createUser(@Args('createUserInput') createUserInput: CreateUserInput) {
+    return this.usersService.create({
+      ...createUserInput,
+      role: UserRole.USER,
+    });
+  }
 
   @UseGuards(JwtAuthGuard)
   @Query(() => User, { name: 'me' })
@@ -38,7 +49,17 @@ export class UsersResolver {
     if (updateUserInput.id !== userId) {
       throw new Error('You can only update your own profile');
     }
+    if (updateUserInput.email) {
+      throw new Error('You cannot update your email address.');
+    }
     return this.usersService.update(userId, updateUserInput);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @Mutation(() => User, { name: 'updateUserByAdmin' })
+  updateUserByAdmin(@Args('updateUserInput') updateUserInput: UpdateUserInput) {
+    return this.usersService.update(updateUserInput.id, updateUserInput);
   }
 
   @UseGuards(JwtAuthGuard)

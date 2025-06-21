@@ -1,5 +1,7 @@
 import { InputType, Field } from '@nestjs/graphql';
 import {
+  IsEmail,
+  IsEnum,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -8,6 +10,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { UserRole } from '../entities/user.entity';
 
 @InputType()
 export class UpdateUserInput {
@@ -29,6 +32,16 @@ export class UpdateUserInput {
   @MinLength(2)
   @MaxLength(50)
   lastName?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsOptional()
+  @IsEmail()
+  email?: string;
+
+  @Field(() => UserRole, { nullable: true })
+  @IsOptional()
+  @IsEnum(UserRole)
+  role?: UserRole;
 
   @Field(() => String, { nullable: true })
   @IsOptional()

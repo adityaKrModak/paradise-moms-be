@@ -55,12 +55,14 @@ model AuthAccount {
 
 model Address {
   id          Int         @id @default(autoincrement())
+  fullName    String      @map("full_name")
+  phoneNumber String?      @map("phone_number")
   street      String
   city        String
   state       String
   zip         String
   country     String
-  addressType AddressType @default(SHIPPING)
+  addressType AddressType @default(SECONDARY)
   userId      Int         @map("user_id")
   user        User        @relation(fields: [userId], references: [id])
   createdAt   DateTime    @default(now()) @map("created_at")
@@ -83,6 +85,9 @@ model Category {
   name        String    @unique // Unique constraint on name
   description String?   // Optional description field
   products    Product[] // One-to-many relation with Product
+  deletedAt   DateTime? @map("deleted_at")
+
+  @@map("categories")
 }
 
 model Product {
@@ -97,6 +102,7 @@ model Product {
   imageUrls   Json        @map("image_urls") // JSON field for image URLs  Stores an array of image URLs as a JSON string
   metadata    Json? // JSON field for metadata
   orderItems  OrderItem[] // One-to-many relation with OrderItem
+  deletedAt   DateTime?   @map("deleted_at")
 
   @@map("products")
 }
@@ -126,9 +132,8 @@ enum OrderStatus {
 }
 
 enum AddressType {
-  SHIPPING
-  BILLING
   PRIMARY
+  SECONDARY
 }
 
 enum Role {

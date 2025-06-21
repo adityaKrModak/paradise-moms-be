@@ -26,6 +26,7 @@ export class ProductsService {
 
   async findAll() {
     return this.prisma.product.findMany({
+      where: { deletedAt: null },
       include: {
         reviews: true,
         orderItems: true,
@@ -36,7 +37,7 @@ export class ProductsService {
 
   async findOne(id: number) {
     return this.prisma.product.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: {
         reviews: true,
         orderItems: true,
@@ -68,8 +69,9 @@ export class ProductsService {
   }
 
   async remove(id: number) {
-    return this.prisma.product.delete({
+    return this.prisma.product.update({
       where: { id },
+      data: { deletedAt: new Date() },
     });
   }
 }

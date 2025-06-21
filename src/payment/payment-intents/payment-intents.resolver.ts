@@ -12,6 +12,16 @@ import { UserRole } from '@/users/entities/user.entity';
 export class PaymentIntentsResolver {
   constructor(private readonly paymentIntentsService: PaymentIntentsService) {}
 
+  @Mutation(() => PaymentIntent, { name: 'createRazorpayOrder' })
+  @UseGuards(JwtAuthGuard)
+  createRazorpayOrder(
+    @Args('orderId', { type: () => Int }) orderId: number,
+    @Context() context,
+  ) {
+    const user = context.req.user;
+    return this.paymentIntentsService.createRazorpayOrder(orderId, user);
+  }
+
   @Mutation(() => PaymentIntent)
   @UseGuards(JwtAuthGuard)
   createPaymentIntent(
