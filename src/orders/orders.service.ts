@@ -70,7 +70,11 @@ export class OrdersService {
         },
       },
       include: {
-        orderItems: true,
+        orderItems: {
+          include: {
+            product: true,
+          },
+        },
         user: true,
       },
     });

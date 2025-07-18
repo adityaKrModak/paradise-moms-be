@@ -29,4 +29,3 @@ async function bootstrap() {
 }
 dotenv.config(); // used for reading the .env file
 bootstrap();
-

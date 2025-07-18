@@ -23,6 +23,7 @@ export class PaymentIntentsService {
     createPaymentIntentInput: CreatePaymentIntentInput,
     userId: number,
   ) {
+    console.log('Payment intent input:', createPaymentIntentInput);
     const { orderId, email, amount, currency, gatewayId, metadata } =
       createPaymentIntentInput;
 
@@ -50,6 +51,9 @@ export class PaymentIntentsService {
         createdAt: {
           gte: tenMinutesAgo,
         },
+      },
+      include: {
+        gateway: true,
       },
     });
 
@@ -89,6 +93,10 @@ export class PaymentIntentsService {
         gatewayId,
         gatewayIntentId,
         metadata,
+      },
+      include: {
+        order: true,
+        gateway: true,
       },
     });
   }
