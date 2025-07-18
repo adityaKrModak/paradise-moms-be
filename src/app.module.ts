@@ -13,6 +13,7 @@ import { GraphQLJSON } from 'graphql-scalars';
 import { PaymentModule } from './payment/payment.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ConfigModule } from '@nestjs/config';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ConfigModule } from '@nestjs/config';
     AuthAccountsModule,
     PaymentModule,
     CategoriesModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
