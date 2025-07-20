@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorators/roles.decorator';
 import { UserRole } from '@/users/entities/user.entity';
+import { GraphQLContext } from '@/auth/interfaces/auth-user.interface';
 
 @Resolver(() => PaymentIntent)
 export class PaymentIntentsResolver {
@@ -17,7 +18,7 @@ export class PaymentIntentsResolver {
   createPaymentIntent(
     @Args('createPaymentIntentInput', { type: () => CreatePaymentIntentInput })
     createPaymentIntentInput: CreatePaymentIntentInput,
-    @Context() context,
+    @Context() context: GraphQLContext,
   ) {
     console.log('Context body:', context.req.body);
     console.log('Resolver input:', createPaymentIntentInput);
@@ -41,8 +42,10 @@ export class PaymentIntentsResolver {
 
   @Query(() => PaymentIntent, { name: 'paymentIntentByOrder' })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  findByOrder(@Args('orderId', { type: () => Int }) orderId: number) {
-    return this.paymentIntentsService.findByOrder(orderId);
+  async findByOrder(
+    @Args('orderId', { type: () => Int }) orderId: number,
+    @Context() context: GraphQLContext,
+  ) {
+    return this.paymentIntentsService.findByOrder(orderId, context.req.user);
   }
 }

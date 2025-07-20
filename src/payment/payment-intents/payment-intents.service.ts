@@ -7,9 +7,9 @@ import { PrismaService } from 'prisma/prisma.service';
 import { CreatePaymentIntentInput } from './dto/create-payment-intent.input';
 import { PaymentGatewaysService } from '@/payment/payment-gateways/payment-gateways.service';
 import { RazorpayService } from '@/payment/razorpay/razorpay.service';
-import { PaymentIntent } from './entities/payment-intent.entity';
-import { User } from 'src/users/entities/user.entity';
+import { User, UserRole } from 'src/users/entities/user.entity';
 import { OrderStatus } from '@prisma/client';
+import { AuthUser } from '@/auth/interfaces/auth-user.interface';
 
 @Injectable()
 export class PaymentIntentsService {
@@ -128,7 +128,23 @@ export class PaymentIntentsService {
     return intent;
   }
 
-  async findByOrder(orderId: number) {
+  async findByOrder(orderId: number, user: AuthUser) {
+    // First check if the order belongs to the user (unless they're admin)
+    if (user.role !== UserRole.ADMIN) {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        select: { userId: true },
+      });
+
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
+
+      if (order.userId !== user.userId) {
+        throw new NotFoundException('Order not found'); // Don't reveal it exists
+      }
+    }
+
     return this.prisma.paymentIntent.findFirst({
       where: { orderId },
       include: {

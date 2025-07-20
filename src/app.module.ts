@@ -14,13 +14,11 @@ import { PaymentModule } from './payment/payment.module';
 import { CategoriesModule } from './categories/categories.module';
 import { ConfigModule } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
-    }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
@@ -36,6 +34,7 @@ import { HealthModule } from './health/health.module';
     PaymentModule,
     CategoriesModule,
     HealthModule,
+    CloudinaryModule,
   ],
 })
 export class AppModule {}

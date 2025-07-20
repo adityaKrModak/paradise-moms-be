@@ -184,6 +184,28 @@ type Payment {
   refunds: [Refund!]
 }
 
+type SyncPaymentStatusResponse {
+  payment: Payment
+  statusChanged: Boolean!
+  previousStatus: String!
+  currentStatus: String!
+  error: String
+  gatewayPaymentId: String
+}
+
+type SyncOrderPaymentsStatusResponse {
+  orderId: Int!
+  totalPayments: Int!
+  syncResults: [SyncPaymentStatusResponse!]!
+}
+
+type BulkSyncPaymentsResponse {
+  totalPayments: Int!
+  successfulSyncs: Int!
+  failedSyncs: Int!
+  syncResults: [SyncPaymentStatusResponse!]!
+}
+
 type Query {
   me: User!
   users: [User!]!
@@ -220,6 +242,27 @@ type Mutation {
   updateReview(updateReviewInput: UpdateReviewInput!): Review!
   removeReview(id: Int!): Review!
   verifyRazorpayPayment(razorpayOrderId: String!, razorpayPaymentId: String!, razorpaySignature: String!): Payment!
+
+  """Sync payment status from Razorpay using our internal payment ID"""
+  syncPaymentStatusFromRazorpay(
+    """Internal payment ID"""
+    paymentId: String!
+  ): SyncPaymentStatusResponse!
+
+  """Sync payment status from Razorpay using Razorpay payment ID"""
+  syncPaymentStatusByGatewayId(
+    """Razorpay payment ID"""
+    gatewayPaymentId: String!
+  ): SyncPaymentStatusResponse!
+
+  """Sync all payment statuses for a specific order from Razorpay"""
+  syncOrderPaymentsStatus(
+    """Order ID"""
+    orderId: Int!
+  ): SyncOrderPaymentsStatusResponse!
+
+  """Sync all pending payments from Razorpay (Admin only)"""
+  syncAllPendingPayments: BulkSyncPaymentsResponse!
   createPaymentGateway(input: CreatePaymentGatewayInput!): PaymentGateway!
   updatePaymentGateway(input: UpdatePaymentGatewayInput!): PaymentGateway!
   removePaymentGateway(id: Int!): PaymentGateway!

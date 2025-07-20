@@ -1,0 +1,119 @@
+# Example GraphQL mutations for syncing payment status from Razorpay
+
+# 1. Sync payment status using internal payment ID
+mutation SyncPaymentStatusFromRazorpay {
+  syncPaymentStatusFromRazorpay(paymentId: "your-payment-uuid-here") {
+    payment {
+      id
+      status
+      amount
+      currency
+      gatewayPaymentId
+      createdAt
+      updatedAt
+    }
+    statusChanged
+    previousStatus
+    currentStatus
+    error
+  }
+}
+
+# 2. Sync payment status using Razorpay payment ID
+mutation SyncPaymentStatusByGatewayId {
+  syncPaymentStatusByGatewayId(gatewayPaymentId: "pay_razorpay_payment_id") {
+    payment {
+      id
+      status
+      amount
+      currency
+      gatewayPaymentId
+      intent {
+        id
+        status
+        order {
+          id
+          status
+        }
+      }
+    }
+    statusChanged
+    previousStatus
+    currentStatus
+    error
+  }
+}
+
+# 3. Sync all payment statuses for a specific order
+mutation SyncOrderPaymentsStatus {
+  syncOrderPaymentsStatus(orderId: 123) {
+    orderId
+    totalPayments
+    syncResults {
+      payment {
+        id
+        status
+        gatewayPaymentId
+      }
+      statusChanged
+      previousStatus
+      currentStatus
+      error
+    }
+  }
+}
+
+# 4. Bulk sync all pending payments (Admin only)
+mutation SyncAllPendingPayments {
+  syncAllPendingPayments {
+    totalPayments
+    successfulSyncs
+    failedSyncs
+    syncResults {
+      payment {
+        id
+        status
+        gatewayPaymentId
+        intent {
+          order {
+            id
+            status
+          }
+        }
+      }
+      statusChanged
+      previousStatus
+      currentStatus
+      error
+    }
+  }
+}
+
+# Query to get payment details (for reference)
+query GetPayment {
+  # You'll need to add this query to your resolver if needed
+  payment(id: "payment-uuid") {
+    id
+    status
+    amount
+    currency
+    gatewayPaymentId
+    intent {
+      id
+      status
+      gatewayIntentId
+      order {
+        id
+        status
+        totalPrice
+      }
+    }
+    gateway {
+      id
+      name
+    }
+    metadata
+    createdAt
+    updatedAt
+  }
+}
